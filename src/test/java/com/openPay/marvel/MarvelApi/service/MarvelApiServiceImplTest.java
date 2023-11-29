@@ -48,31 +48,29 @@ class MarvelApiServiceImplTest {
 
     @Test
     void getAllCharactersFromApi() {
-        // Mockear la respuesta de la API
+        // Mockea la respuesta de la API
         when(restTemplate.exchange(any(), eq(HttpMethod.GET), any(HttpEntity.class), eq(JsonNode.class)))
                 .thenReturn(ResponseEntity.ok(new ObjectMapper().createObjectNode().putArray("results")));
 
-        // Llamar al método del servicio
+        // Llama al método del servicio
         List<MarvelCharacter> characters = marvelApiService.getAllCharactersFromApi();
 
-        // Verificar que se llamó al repositorio de logs
+        // Verifica que se llamó al repositorio de logs
         verify(logRepository, times(1)).save(any(Log.class));
-
-        // Verificar que se llamó a la API externa
     }
 
     @Test
     void getCharacterByIdFromApi() {
-        // Mockear la respuesta de la API
+        // Mockea la respuesta de la API
         when(restTemplate.exchange(any(), eq(HttpMethod.GET), any(HttpEntity.class), eq(JsonNode.class)))
                 .thenReturn(ResponseEntity.ok(new ObjectMapper().createObjectNode().putArray("results")));
 
-        // Llamar al método del servicio
+        // Llama al método del servicio
         MarvelCharacter character = marvelApiService.getCharacterByIdFromApi(1011334L);
 
-        // Verificar que se llamó al repositorio de logs
+        // Verifica que se llamó al repositorio de logs
         verify(logRepository, times(1)).save(any(Log.class));
 
-        // Verificar que se llamó a la API externa
+        // Verifica que se llamó a la API externa
     }
 }
