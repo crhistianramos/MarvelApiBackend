@@ -29,5 +29,4 @@ public class MarvelController {
         return marvelService.getCharacterByIdFromApi(characterId);
     }
 
-    // Puedes agregar más métodos según tus necesidades
 }
