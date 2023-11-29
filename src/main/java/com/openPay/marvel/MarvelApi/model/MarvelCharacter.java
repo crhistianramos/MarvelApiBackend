@@ -1,10 +1,7 @@
 package com.openPay.marvel.MarvelApi.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -13,18 +10,22 @@ public class MarvelCharacter {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
-
     private String description;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "thumbnail_id", referencedColumnName = "id")
+    private Thumbnail thumbnail;
 
     // Constructor sin argumentos requerido por JPA
     public MarvelCharacter() {
     }
 
     // Constructor con todos los campos
-    public MarvelCharacter(Long id, String name, String description) {
+    public MarvelCharacter(Long id, String name, String description, Thumbnail thumbnail) {
         this.id = id;
         this.name = name;
         this.description = description;
+        this.thumbnail = thumbnail;
     }
 
     // Getters y Setters
@@ -51,5 +52,13 @@ public class MarvelCharacter {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getThumbnail() {
+        return thumbnail.getPath()+"."+thumbnail.getExtension();
+    }
+
+    public void setThumbnail(Thumbnail thumbnail) {
+        this.thumbnail = thumbnail;
     }
 }
