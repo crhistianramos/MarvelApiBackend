@@ -4,7 +4,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.openPay.marvel.MarvelApi.model.Log;
 import com.openPay.marvel.MarvelApi.model.MarvelCharacter;
+import com.openPay.marvel.MarvelApi.repository.LogRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -18,11 +21,17 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 
 @Service
 public class MarvelApiServiceImpl implements MarvelApiService {
+
+    @Autowired
+    private LogRepository logRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${marvel.api.public-key}")
@@ -38,6 +47,9 @@ public class MarvelApiServiceImpl implements MarvelApiService {
     public List<MarvelCharacter> getAllCharactersFromApi() {
         long timestamp = System.currentTimeMillis();
         String hash = generateHash(timestamp);
+
+        //Guarda en BD H2 la hora de la consulta
+        saveTimestamp(System.currentTimeMillis(), null, null);
 
         // Construye la URL para obtener todos los personajes
         String url = baseUrl + "/v1/public/characters";
@@ -68,6 +80,7 @@ public class MarvelApiServiceImpl implements MarvelApiService {
         // Verifica si "data" contiene una lista de personajes o un solo personaje
         if (dataNode != null && dataNode.has("results")) {
             JsonNode resultsNode = dataNode.get("results");
+
             if (resultsNode.isArray()) {
                 // Convierte la lista de personajes
                 return objectMapper.convertValue(resultsNode, new TypeReference<List<MarvelCharacter>>() {});
@@ -116,7 +129,12 @@ public class MarvelApiServiceImpl implements MarvelApiService {
         if (dataNode != null && dataNode.has("results") && dataNode.get("results").isArray()) {
             JsonNode resultsNode = dataNode.get("results").get(0); // Tomar el primer elemento del array
             // Convierte el objeto de un solo personaje
-            return objectMapper.convertValue(resultsNode, MarvelCharacter.class);
+            MarvelCharacter marvelCharacter = objectMapper.convertValue(resultsNode, MarvelCharacter.class);
+
+            // Guarda el timestamp y el id del personaje en el log
+            saveTimestamp(timestamp, "getCharacterByIdFromApi", marvelCharacter.getId());
+
+            return marvelCharacter;
         }
 
         return null;
@@ -144,4 +162,26 @@ public class MarvelApiServiceImpl implements MarvelApiService {
             return null;
         }
     }
+
+    private void saveTimestamp(long timestamp, String service, Long characterId) {
+        // Convertir el timestamp a LocalDateTime
+        LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault());
+
+        // Crear el objeto Log y establecer la timestamp
+        Log log = new Log();
+        log.setTimestamp(localDateTime);
+
+        // Establecer las variables opcionales si están presentes
+        if (service != null) {
+            log.setService(service);
+        }
+
+        if (characterId != null) {
+            log.setCharacterId(characterId);
+        }
+
+        // Guardar en el repositorio
+        logRepository.save(log);
+    }
+
 }
