@@ -3,10 +3,11 @@ package com.openPay.marvel.MarvelApi.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openPay.marvel.MarvelApi.model.Log;
 import com.openPay.marvel.MarvelApi.model.MarvelCharacter;
 import com.openPay.marvel.MarvelApi.repository.LogRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -15,10 +16,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
@@ -42,33 +42,39 @@ public class MarvelApiServiceImpl implements MarvelApiService {
 
     @Value("${marvel.api.base-url}")
     private String baseUrl;
+    private static final String CHARACTERS_URL = "/v1/public/characters";
+    private static final Logger logger = LoggerFactory.getLogger(MarvelApiServiceImpl.class);
 
     @Override
     public List<MarvelCharacter> getAllCharactersFromApi() {
+        // Captura CurrentTime para generar hash
         long timestamp = System.currentTimeMillis();
         String hash = generateHash(timestamp);
 
-        //Guarda en BD H2 la hora de la consulta
-        saveTimestamp(System.currentTimeMillis(), null, null);
+        // Guarda en BD H2 la hora de la consulta
+        saveTimestamp(System.currentTimeMillis(), "getAllCharactersFromApi", null);
 
         // Construye la URL para obtener todos los personajes
-        String url = baseUrl + "/v1/public/characters";
+        final String url = baseUrl + CHARACTERS_URL;
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
                 .queryParam("ts", timestamp)
                 .queryParam("apikey", publicKey)
                 .queryParam("hash", hash);
 
-        // Crea los encabezads necesarios
+        // Almacena la URL construida en una variable local
+        String builtUrl = builder.build().toUriString();
+
+        // Crea los encabezados necesarios
         HttpHeaders headers = new HttpHeaders();
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 
         // Construye el objeto HttpEntity con encabezados
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-        // Contruye la solicitud HTTP
+        // Construye la solicitud HTTP
         RestTemplate restTemplate = new RestTemplate();
         ResponseEntity<JsonNode> responseEntity = restTemplate.exchange(
-                builder.toUriString(),
+                builtUrl,
                 HttpMethod.GET,
                 requestEntity,
                 JsonNode.class
@@ -94,51 +100,63 @@ public class MarvelApiServiceImpl implements MarvelApiService {
         return Collections.emptyList();
     }
 
+
     @Override
     public MarvelCharacter getCharacterByIdFromApi(Long id) {
-        long timestamp = System.currentTimeMillis();
-        String hash = generateHash(timestamp);
+        try {
+            long timestamp = System.currentTimeMillis();
+            String hash = generateHash(timestamp);
 
-        // Construye la URL para obtener un personaje específico
-        String url = baseUrl + "/v1/public/characters/" + id;
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
-                .queryParam("ts", timestamp)
-                .queryParam("apikey", publicKey)
-                .queryParam("hash", hash);
+            // Construye la URL para obtener un personaje específico
+            String url = baseUrl + CHARACTERS_URL + "/" + id;
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
+                    .queryParam("ts", timestamp)
+                    .queryParam("apikey", publicKey)
+                    .queryParam("hash", hash);
 
-        // Construye encabezados necesarios
-        HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+            // Construye encabezados necesarios
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 
-        // Construye Objeto HttpEntity con encabezados
-        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+            // Construye Objeto HttpEntity con encabezados
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-        // Construye la solicitud HTTP
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<JsonNode> responseEntity = restTemplate.exchange(
-                builder.toUriString(),
-                HttpMethod.GET,
-                requestEntity,
-                JsonNode.class
-        );
+            // Construye la solicitud HTTP
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<JsonNode> responseEntity = restTemplate.exchange(
+                    builder.toUriString(),
+                    HttpMethod.GET,
+                    requestEntity,
+                    JsonNode.class
+            );
 
-        // Obtiene nodo "data" de la respuesta
-        JsonNode dataNode = responseEntity.getBody().get("data");
+            // Obtiene nodo "data" de la respuesta
+            JsonNode dataNode = responseEntity.getBody().get("data");
 
-        // Verifica si "data" contiene un solo personaje
-        if (dataNode != null && dataNode.has("results") && dataNode.get("results").isArray()) {
-            JsonNode resultsNode = dataNode.get("results").get(0); // Tomar el primer elemento del array
-            // Convierte el objeto de un solo personaje
-            MarvelCharacter marvelCharacter = objectMapper.convertValue(resultsNode, MarvelCharacter.class);
+            // Verifica si "data" contiene un solo personaje
+            if (dataNode != null && dataNode.has("results") && dataNode.get("results").isArray()) {
+                JsonNode resultsNode = dataNode.get("results").get(0); // Tomar el primer elemento del array
+                // Convierte el objeto de un solo personaje
+                MarvelCharacter marvelCharacter = objectMapper.convertValue(resultsNode, MarvelCharacter.class);
 
-            // Guarda el timestamp y el id del personaje en el log
-            saveTimestamp(timestamp, "getCharacterByIdFromApi", marvelCharacter.getId());
+                // Guarda el timestamp y el id del personaje en el log
+                saveTimestamp(timestamp, "getCharacterByIdFromApi", marvelCharacter.getId());
 
-            return marvelCharacter;
+                return marvelCharacter;
+            }
+
+            String errorMessage = "No se encontró el personaje con ID: " + id;
+            logger.warn(errorMessage);
+
+            // Devuelve null si no se encuentra el personaje
+            return null;
+        } catch (HttpClientErrorException ex) {
+            return null;
+        } catch (Exception ex) {
+            return null;
         }
-
-        return null;
     }
+
 
 
     private String generateHash(long timestamp) {
@@ -146,7 +164,7 @@ public class MarvelApiServiceImpl implements MarvelApiService {
             // Concatena timestamp, private key y public key
             String toHash = timestamp + privateKey + publicKey;
 
-            // Utilizar MD5 para generar el hash
+            // Utiliza MD5 para generar el hash
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] hashBytes = md.digest(toHash.getBytes(StandardCharsets.UTF_8));
 
