@@ -2,75 +2,122 @@ package com.openPay.marvel.MarvelApi.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.openPay.marvel.MarvelApi.model.Log;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openPay.marvel.MarvelApi.model.MarvelCharacter;
 import com.openPay.marvel.MarvelApi.repository.LogRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.client.RestTemplate;
-import java.util.Collections;
+
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest
 @RunWith(MockitoJUnitRunner.class)
-class MarvelApiServiceImplTest {
+public class MarvelApiServiceImplTest {
 
     @Mock
     private LogRepository logRepository;
 
     @Mock
-    private RestTemplate restTemplate;
+    private RestTemplateWrapper restTemplate;
 
     @InjectMocks
     private MarvelApiServiceImpl marvelApiService;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-
-        ReflectionTestUtils.setField(marvelApiService, "baseUrl", "https://gateway.marvel.com:443");
-        ReflectionTestUtils.setField(marvelApiService, "privateKey", "05023f9fa517d68781de9ccc07c3d91dece9b1c8");
-        ReflectionTestUtils.setField(marvelApiService, "publicKey", "1c69002b40d451706a6cc7f63d0919f0");
-    }
-
     @Test
-    void getAllCharactersFromApi() {
-        // Mockea la respuesta de la API
-        when(restTemplate.exchange(any(), eq(HttpMethod.GET), any(HttpEntity.class), eq(JsonNode.class)))
-                .thenReturn(ResponseEntity.ok(new ObjectMapper().createObjectNode().putArray("results")));
+    public void testGetAllCharactersFromApi() {
+        // Configura el comportamiento del restTemplate mock
+        when(restTemplate.exchange(any(), eq(HttpMethod.GET), any(), eq(JsonNode.class)))
+                .thenReturn(ResponseEntity.ok(createMockJsonNodeWithCharacters()));
 
-        // Llama al método del servicio
+        // Llama al método que deseas probar
         List<MarvelCharacter> characters = marvelApiService.getAllCharactersFromApi();
 
-        // Verifica que se llamó al repositorio de logs
-        verify(logRepository, times(1)).save(any(Log.class));
+        // Realiza las aserciones necesarias
+        // Verifica que la lista de personajes no esté vacía
+        assertFalse(characters.isEmpty());
+        // Verifica que la lista tenga la cantidad correcta de personajes (en este caso, 2)
+        assertEquals(2, characters.size());
+        // Puedes realizar más aserciones según la estructura esperada de los personajes
     }
 
     @Test
-    void getCharacterByIdFromApi() {
-        // Mockea la respuesta de la API
-        when(restTemplate.exchange(any(), eq(HttpMethod.GET), any(HttpEntity.class), eq(JsonNode.class)))
-                .thenReturn(ResponseEntity.ok(new ObjectMapper().createObjectNode().putArray("results")));
+    public void testGetCharacterByIdFromApi() {
+        // Configura el comportamiento del restTemplate mock
+        when(restTemplate.exchange(any(), eq(HttpMethod.GET), any(), eq(JsonNode.class)))
+                .thenReturn(ResponseEntity.ok(createMockJsonNode()));
 
-        // Llama al método del servicio
+        // Llama al método que deseas probar
         MarvelCharacter character = marvelApiService.getCharacterByIdFromApi(1011334L);
 
-        // Verifica que se llamó al repositorio de logs
-        verify(logRepository, times(1)).save(any(Log.class));
+        // Realiza las aserciones necesarias
+        // Verifica que el personaje no sea nulo
+        assertNotNull(character);
+        // Verifica que el ID del personaje sea el esperado
+        assertEquals(1011334L, character.getId().longValue());
+        // Puedes realizar más aserciones según la estructura esperada del personaje
+    }
 
-        // Verifica que se llamó a la API externa
+    // Métodos de utilidad para crear un JsonNode simulado
+    private JsonNode createMockJsonNode() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectNode jsonNode = objectMapper.createObjectNode();
+
+        // Crea el nodo "data" y agrega la información del personaje
+        ObjectNode dataNode = objectMapper.createObjectNode();
+
+        // Simula una lista de personajes
+        ArrayNode charactersArray = objectMapper.createArrayNode();
+        ObjectNode characterNode = objectMapper.createObjectNode();
+        characterNode.put("id", 1011334L);
+        characterNode.put("name", "Iron Man");
+        // Agrega otros campos según la estructura de tus objetos MarvelCharacter
+        charactersArray.add(characterNode);
+
+        // Agrega el nodo "results" al nodo "data"
+        dataNode.set("results", charactersArray);
+
+        // Agrega el nodo "data" al JSON principal
+        jsonNode.set("data", dataNode);
+
+        return jsonNode;
+    }
+
+    private JsonNode createMockJsonNodeWithCharacters() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectNode jsonNode = objectMapper.createObjectNode();
+
+        // Simula una lista de personajes
+        ArrayNode charactersArray = objectMapper.createArrayNode();
+
+        ObjectNode character1 = objectMapper.createObjectNode();
+        character1.put("id", 1011334);
+        character1.put("name", "Iron Man");
+        // Agrega otros campos según la estructura de tus objetos MarvelCharacter
+        charactersArray.add(character1);
+
+        ObjectNode character2 = objectMapper.createObjectNode();
+        character2.put("id", 1017100);
+        character2.put("name", "Spider-Man");
+        // Agrega otros campos según la estructura de tus objetos MarvelCharacter
+        charactersArray.add(character2);
+
+        // Crea el nodo "data" y agrega la lista de personajes
+        ObjectNode dataNode = objectMapper.createObjectNode();
+        dataNode.set("results", charactersArray);
+
+        // Agrega el nodo "data" al JSON principal
+        jsonNode.set("data", dataNode);
+
+        return jsonNode;
     }
 }

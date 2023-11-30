@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
@@ -29,7 +31,15 @@ import java.util.List;
 
 @Service
 public class MarvelApiServiceImpl implements MarvelApiService {
+    // Reemplaza la declaración de RestTemplate con RestTemplateWrapper
+    private final RestTemplateWrapper restTemplate;
 
+    // Constructor para inyectar RestTemplateWrapper
+    @Autowired
+    public MarvelApiServiceImpl(LogRepository logRepository, RestTemplateWrapper restTemplate) {
+        this.logRepository = logRepository;
+        this.restTemplate = restTemplate;
+    }
     @Autowired
     private LogRepository logRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -61,8 +71,9 @@ public class MarvelApiServiceImpl implements MarvelApiService {
                 .queryParam("apikey", publicKey)
                 .queryParam("hash", hash);
 
+
         // Almacena la URL construida en una variable local
-        String builtUrl = builder.build().toUriString();
+        URI fullUri = builder.build().toUri();
 
         // Crea los encabezados necesarios
         HttpHeaders headers = new HttpHeaders();
@@ -71,10 +82,9 @@ public class MarvelApiServiceImpl implements MarvelApiService {
         // Construye el objeto HttpEntity con encabezados
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-        // Construye la solicitud HTTP
-        RestTemplate restTemplate = new RestTemplate();
+        // Utiliza la URI completa en lugar de una cadena de texto
         ResponseEntity<JsonNode> responseEntity = restTemplate.exchange(
-                builtUrl,
+                fullUri,
                 HttpMethod.GET,
                 requestEntity,
                 JsonNode.class
@@ -108,11 +118,15 @@ public class MarvelApiServiceImpl implements MarvelApiService {
             String hash = generateHash(timestamp);
 
             // Construye la URL para obtener un personaje específico
-            String url = baseUrl + CHARACTERS_URL + "/" + id;
+            // Construye la URL para obtener un personaje específico
+            String url = (baseUrl != null ? baseUrl : "") + (baseUrl != null && baseUrl.endsWith("/") ? "" : "/") + CHARACTERS_URL + "/" + id;
             UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
                     .queryParam("ts", timestamp)
                     .queryParam("apikey", publicKey)
                     .queryParam("hash", hash);
+
+            // Construye la URI completa
+            URI fullUri = builder.build().toUri();
 
             // Construye encabezados necesarios
             HttpHeaders headers = new HttpHeaders();
@@ -122,9 +136,8 @@ public class MarvelApiServiceImpl implements MarvelApiService {
             HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
             // Construye la solicitud HTTP
-            RestTemplate restTemplate = new RestTemplate();
             ResponseEntity<JsonNode> responseEntity = restTemplate.exchange(
-                    builder.toUriString(),
+                    fullUri,
                     HttpMethod.GET,
                     requestEntity,
                     JsonNode.class
