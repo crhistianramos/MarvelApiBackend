@@ -17,9 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -92,7 +90,7 @@ public class MarvelApiServiceImpl implements MarvelApiService {
         // Obtiene el nodo "data" de la respuesta
         JsonNode dataNode = responseEntity.getBody().get("data");
 
-        // Verifica si "data" contiene una lista de personajes o un solo personaje
+        // Verifica si data contiene una lista de personajes o un solo personaje
         if (dataNode != null && dataNode.has("results")) {
             JsonNode resultsNode = dataNode.get("results");
 
