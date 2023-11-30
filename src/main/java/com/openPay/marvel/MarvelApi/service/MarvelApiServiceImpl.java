@@ -31,7 +31,6 @@ import java.util.List;
 
 @Service
 public class MarvelApiServiceImpl implements MarvelApiService {
-    // Reemplaza la declaración de RestTemplate con RestTemplateWrapper
     private final RestTemplateWrapper restTemplate;
 
     // Constructor para inyectar RestTemplateWrapper
@@ -118,7 +117,6 @@ public class MarvelApiServiceImpl implements MarvelApiService {
             String hash = generateHash(timestamp);
 
             // Construye la URL para obtener un personaje específico
-            // Construye la URL para obtener un personaje específico
             String url = (baseUrl != null ? baseUrl : "") + (baseUrl != null && baseUrl.endsWith("/") ? "" : "/") + CHARACTERS_URL + "/" + id;
             UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
                     .queryParam("ts", timestamp)
@@ -146,12 +144,11 @@ public class MarvelApiServiceImpl implements MarvelApiService {
             // Obtiene nodo "data" de la respuesta
             JsonNode dataNode = responseEntity.getBody().get("data");
 
-            // Verifica si "data" contiene un solo personaje
+            // Verifica si data contiene un solo personaje
             if (dataNode != null && dataNode.has("results") && dataNode.get("results").isArray()) {
                 JsonNode resultsNode = dataNode.get("results").get(0); // Tomar el primer elemento del array
                 // Convierte el objeto de un solo personaje
                 MarvelCharacter marvelCharacter = objectMapper.convertValue(resultsNode, MarvelCharacter.class);
-
                 // Guarda el timestamp y el id del personaje en el log
                 saveTimestamp(timestamp, "getCharacterByIdFromApi", marvelCharacter.getId());
 
@@ -161,7 +158,7 @@ public class MarvelApiServiceImpl implements MarvelApiService {
             String errorMessage = "No se encontró el personaje con ID: " + id;
             logger.warn(errorMessage);
 
-            // Devuelve null si no se encuentra el personaje
+            // Devuelve null si no encuentra el personaje
             return null;
         } catch (HttpClientErrorException ex) {
             return null;
@@ -202,7 +199,7 @@ public class MarvelApiServiceImpl implements MarvelApiService {
         Log log = new Log();
         log.setTimestamp(localDateTime);
 
-        // Establecer las variables opcionales si están presentes
+        // Establecer las variables opcionales
         if (service != null) {
             log.setService(service);
         }

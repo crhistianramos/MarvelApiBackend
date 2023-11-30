@@ -11,9 +11,9 @@ import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 
+import java.net.URI;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -39,15 +39,13 @@ public class MarvelApiServiceImplTest {
         when(restTemplate.exchange(any(), eq(HttpMethod.GET), any(), eq(JsonNode.class)))
                 .thenReturn(ResponseEntity.ok(createMockJsonNodeWithCharacters()));
 
-        // Llama al método que deseas probar
+        // Llama al método
         List<MarvelCharacter> characters = marvelApiService.getAllCharactersFromApi();
 
-        // Realiza las aserciones necesarias
         // Verifica que la lista de personajes no esté vacía
         assertFalse(characters.isEmpty());
         // Verifica que la lista tenga la cantidad correcta de personajes (en este caso, 2)
         assertEquals(2, characters.size());
-        // Puedes realizar más aserciones según la estructura esperada de los personajes
     }
 
     @Test
@@ -59,20 +57,18 @@ public class MarvelApiServiceImplTest {
         // Llama al método que deseas probar
         MarvelCharacter character = marvelApiService.getCharacterByIdFromApi(1011334L);
 
-        // Realiza las aserciones necesarias
         // Verifica que el personaje no sea nulo
         assertNotNull(character);
         // Verifica que el ID del personaje sea el esperado
         assertEquals(1011334L, character.getId().longValue());
-        // Puedes realizar más aserciones según la estructura esperada del personaje
     }
 
-    // Métodos de utilidad para crear un JsonNode simulado
+    // Metodo de que crea un nodo simulado
     private JsonNode createMockJsonNode() {
         ObjectMapper objectMapper = new ObjectMapper();
         ObjectNode jsonNode = objectMapper.createObjectNode();
 
-        // Crea el nodo "data" y agrega la información del personaje
+        // Instancio información del personaje
         ObjectNode dataNode = objectMapper.createObjectNode();
 
         // Simula una lista de personajes
@@ -80,13 +76,12 @@ public class MarvelApiServiceImplTest {
         ObjectNode characterNode = objectMapper.createObjectNode();
         characterNode.put("id", 1011334L);
         characterNode.put("name", "Iron Man");
-        // Agrega otros campos según la estructura de tus objetos MarvelCharacter
         charactersArray.add(characterNode);
 
-        // Agrega el nodo "results" al nodo "data"
+        // Agrega el nodo
         dataNode.set("results", charactersArray);
 
-        // Agrega el nodo "data" al JSON principal
+        // Agrega al JSON principal
         jsonNode.set("data", dataNode);
 
         return jsonNode;
@@ -102,22 +97,47 @@ public class MarvelApiServiceImplTest {
         ObjectNode character1 = objectMapper.createObjectNode();
         character1.put("id", 1011334);
         character1.put("name", "Iron Man");
-        // Agrega otros campos según la estructura de tus objetos MarvelCharacter
         charactersArray.add(character1);
 
         ObjectNode character2 = objectMapper.createObjectNode();
         character2.put("id", 1017100);
         character2.put("name", "Spider-Man");
-        // Agrega otros campos según la estructura de tus objetos MarvelCharacter
         charactersArray.add(character2);
 
-        // Crea el nodo "data" y agrega la lista de personajes
+        // Crea el nodo y agrega la lista de personajes
         ObjectNode dataNode = objectMapper.createObjectNode();
         dataNode.set("results", charactersArray);
 
-        // Agrega el nodo "data" al JSON principal
+        // Agrega al JSON principal
         jsonNode.set("data", dataNode);
 
         return jsonNode;
+    }
+
+    @Test
+    public void testRestTemplateWrapperExchange() {
+        // Configura el mock
+        when(restTemplate.exchange(any(), eq(HttpMethod.GET), any(), eq(JsonNode.class)))
+                .thenReturn(ResponseEntity.ok(createMockJsonNodeWithCharacters()));
+
+        // Llama al método
+        ResponseEntity<JsonNode> responseEntity = restTemplate.exchange(
+                URI.create("http://example.com/api/characters"),
+                HttpMethod.GET,
+                new HttpEntity<>(new HttpHeaders()),
+                JsonNode.class
+        );
+
+        assertNotNull(responseEntity);
+        assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
+        assertNotNull(responseEntity.getBody());
+
+        JsonNode dataNode = responseEntity.getBody().get("data");
+        assertNotNull(dataNode);
+
+        JsonNode resultsNode = dataNode.get("results");
+        assertNotNull(resultsNode);
+        assertTrue(resultsNode.isArray());
+        assertEquals(2, resultsNode.size());
     }
 }
