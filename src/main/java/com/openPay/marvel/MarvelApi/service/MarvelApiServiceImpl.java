@@ -59,7 +59,7 @@ public class MarvelApiServiceImpl implements MarvelApiService {
         String hash = generateHash(timestamp);
 
         // Guarda en BD H2 la hora de la consulta
-        saveTimestamp(System.currentTimeMillis(), "getAllCharactersFromApi", null);
+        saveTimestamp(System.currentTimeMillis(), "Consulta personajes de manera general", null);
 
         // Construye la URL para obtener todos los personajes
         final String url = baseUrl + CHARACTERS_URL;
@@ -148,7 +148,7 @@ public class MarvelApiServiceImpl implements MarvelApiService {
                 // Convierte el objeto de un solo personaje
                 MarvelCharacter marvelCharacter = objectMapper.convertValue(resultsNode, MarvelCharacter.class);
                 // Guarda el timestamp y el id del personaje en el log
-                saveTimestamp(timestamp, "getCharacterByIdFromApi", marvelCharacter.getId());
+                saveTimestamp(timestamp, "Consulta por id", marvelCharacter.getId());
 
                 return marvelCharacter;
             }

@@ -54,7 +54,7 @@ public class MarvelApiServiceImplTest {
         when(restTemplate.exchange(any(), eq(HttpMethod.GET), any(), eq(JsonNode.class)))
                 .thenReturn(ResponseEntity.ok(createMockJsonNode()));
 
-        // Llama al método que deseas probar
+        // Llama al método a probar
         MarvelCharacter character = marvelApiService.getCharacterByIdFromApi(1011334L);
 
         // Verifica que el personaje no sea nulo
