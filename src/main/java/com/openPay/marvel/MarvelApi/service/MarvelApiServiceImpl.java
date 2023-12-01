@@ -148,7 +148,7 @@ public class MarvelApiServiceImpl implements MarvelApiService {
                 // Convierte el objeto de un solo personaje
                 MarvelCharacter marvelCharacter = objectMapper.convertValue(resultsNode, MarvelCharacter.class);
                 // Guarda el timestamp y el id del personaje en el log
-                saveTimestamp(timestamp, "Consulta por id", marvelCharacter.getId());
+                saveTimestamp(timestamp, "Consulta de manera individual", marvelCharacter.getId());
 
                 return marvelCharacter;
             }
