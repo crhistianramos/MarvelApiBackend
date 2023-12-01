@@ -33,18 +33,6 @@ public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(LogController.class);
 
-    @GetMapping("/public")
-    public ResponseEntity<?> getMensajePublico() {
-        var auth =  SecurityContextHolder.getContext().getAuthentication();
-        logger.info("Datos del Usuario: {}", auth.getPrincipal());
-        logger.info("Datos de los Permisos {}", auth.getAuthorities());
-        logger.info("Esta autenticado {}", auth.isAuthenticated());
-
-        Map<String, String> mensaje = new HashMap<>();
-        mensaje.put("contenido", "Hola. esto es publico");
-        return ResponseEntity.ok(mensaje);
-    }
-
     @PostMapping("/public/authenticate")
     public ResponseEntity<TokenInfo> authenticate(@RequestBody AuthenticationReq authenticationReq) {
         logger.info("Autenticando al usuario {}", authenticationReq.getUsuario());
